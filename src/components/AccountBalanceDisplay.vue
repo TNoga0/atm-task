@@ -1,6 +1,4 @@
 <script setup>
-import {ref} from 'vue';
-
 const props = defineProps(['displayedBalance'])
 </script>
 
@@ -12,7 +10,6 @@ const props = defineProps(['displayedBalance'])
 
 <style scoped>
 .balance-display {
-  /* width: 200px; */
   height: 40px; 
   margin: 2px; 
   text-align: center; 

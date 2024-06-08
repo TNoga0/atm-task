@@ -31,7 +31,7 @@ const enterInput = () => {
     <InputDisplay :displayed-text="userInputValue"/>
     <div class="keypad">
       <div v-for="num in [7,8,9]" :key="num" class="key" @click="pressKey(`${num}`)">{{ num }}</div>
-      <div class="key blank"></div> <!-- Blank space -->
+      <div class="key blank"></div>
       <div v-for="num in [4,5,6]" :key="num" class="key" @click="pressKey(`${num}`)">{{ num }}</div>
       <div class="cancel key" @click="cancelInput">Cancel</div>
       <div v-for="num in [1,2,3]" :key="num" class="key" @click="pressKey(`${num}`)">{{ num }}</div>
@@ -50,12 +50,12 @@ const enterInput = () => {
 }
 .keypad {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 4 columns */
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.1em;
 }
 .key, .zero-key, .blank {
   text-align: center;
-  line-height: 3em; /* Adjust line height for better vertical alignment */
+  line-height: 3em;
   border: 1px solid #ccc;
   cursor: pointer;
 }
@@ -65,7 +65,7 @@ const enterInput = () => {
   cursor: default !important;
 }
 .zero-key { 
-  grid-column: span 3; /* Zero key spans three columns */
+  grid-column: span 3;
 }
 .cancel {
   background-color: #f53939;

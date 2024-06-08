@@ -3,48 +3,68 @@ import { useGeneralStore } from '@/stores/generalStore';
 import { ref } from 'vue';
 
 const store = useGeneralStore()
+const returnObject = ref(createInitialReturnObject())
 
-const banknotesUsed = ref({})
+
+function createInitialReturnObject() {
+  return {
+    operationSuccessful: false,
+    banknotesUsed: {},
+    balanceLeft: store.getAccountBalance(),
+    statusMessage: ''
+  };
+}
+
+function calculateBanknotesToPayOut(amountToWithdraw) {
+  store.availableBanknotes.forEach(banknote => {
+    returnObject.value.banknotesUsed[banknote] = 0;
+    while (amountToWithdraw >= banknote) {
+      returnObject.value.banknotesUsed[banknote] += 1;
+      amountToWithdraw -= banknote;
+    }
+    if (returnObject.value.banknotesUsed[banknote] > 0) {
+      returnObject.value.statusMessage += `${returnObject.value.banknotesUsed[banknote]}x${banknote}PLN `;
+    }
+  });
+  return amountToWithdraw
+}
 
 const performWithdraw = (amount) => {
   const balance = store.getAccountBalance();
   let amountToWithdraw = parseInt(amount)
   var temporaryBalance = balance - amountToWithdraw
-  var returnObject = {
-    operationSuccessful: false,
-    banknotesUsed: {},
-    balanceLeft: balance,
-    statusMessage: ''
-  }
+  
   return new Promise((resolve, reject) => {
     if (balance < amountToWithdraw) {
-      returnObject.statusMessage = 'Cannot withdraw. Account balance too low.'
-      reject(returnObject);
+      returnObject.value.statusMessage = 'Cannot withdraw. Account balance too low.'
+      reject(returnObject.value);
       return;
     }
-    store.availableBanknotes.forEach(banknote => {
-      returnObject.banknotesUsed[banknote] = 0
-      while(amountToWithdraw >= banknote) {
-        returnObject.banknotesUsed[banknote] += 1;
-        amountToWithdraw = amountToWithdraw - banknote;
-      }
-      if (returnObject.banknotesUsed[banknote] > 0) {
-        returnObject.statusMessage += `${returnObject.banknotesUsed[banknote]}x${banknote}PLN `
-      }
-      
-    })
+    amountToWithdraw = calculateBanknotesToPayOut(amountToWithdraw)
     if (amountToWithdraw === 0) {
-      returnObject.operationSuccessful = true;
-      returnObject.statusMessage = 'Operation successful. Banknotes to be collected: ' + returnObject.statusMessage.trim();
-      returnObject.balanceLeft = temporaryBalance;
-      store.setAccountBalance(temporaryBalance);
+      finalizeWithdrawal(temporaryBalance)
     }
     else {
-      returnObject.banknotesUsed = {}
-      returnObject.statusMessage = 'Incorrect withdrawal value. No banknotes to satisfy this request.'
+      rejectWithdrawal()
     }
-    resolve(returnObject);
+    resolve(returnObject.value);
     })
+}
+
+function finalizeWithdrawal (temporaryBalance) {
+  Object.assign(returnObject.value, {
+    operationSuccessful: true,
+    statusMessage: 'Operation successful. Banknotes to be collected: ' + returnObject.value.statusMessage.trim(),
+    balanceLeft: temporaryBalance,
+  })
+  store.setAccountBalance(temporaryBalance);
+}
+
+const rejectWithdrawal = () => {
+  Object.assign(returnObject.value, {
+    banknotesUsed: {},
+    statusMessage: 'Incorrect withdrawal value. No banknotes to satisfy this request.'
+  })
 }
 
 defineExpose({performWithdraw})

@@ -5,22 +5,33 @@ import { defineProps, ref } from 'vue';
 const store = useGeneralStore()
 const emit = defineEmits(['fixDeclaration', 'insertMore'])
 
-const banknotesUsed = ref({})
 const depositStarted = ref(false)
 
 const statusMessage = ref('')
 const currentDeposit = ref(0)
 const amountToDeposit = ref(0)
-const returnObject = ref({
+
+function createDefaultReturnObject() {
+  return {
     operationSuccessful: false,
     banknotesUsed: {},
     balanceLeft: store.getAccountBalance(),
     needInsert: false,
     needDeclarationFix: false,
     statusMessage: ''
-  })
+  }
+}
+
+const returnObject = ref(createDefaultReturnObject())
 
 const depositPromiseResolve = ref(null)
+
+const resetDeposit = () => {
+  currentDeposit.value = 0;
+  amountToDeposit.value = 0;
+  returnObject.value = createDefaultReturnObject();
+  depositStarted.value = false;
+}
 
 const performDeposit = (amount) => {
   amountToDeposit.value = parseInt(amount)
@@ -28,14 +39,17 @@ const performDeposit = (amount) => {
   return new Promise((resolve, reject) => {
     if (amountToDeposit.value === currentDeposit.value) {
       finishInsertingBanknotes();
+      return;
     }
-    depositPromiseResolve.value = resolve;
     if (!(amountToDeposit.value % 10 === 0)) {
-    returnObject.value.statusMessage = 'Incorrect deposit value. No banknotes to satisfy this request.'
-    reject(returnObject.value);
+      returnObject.value.statusMessage = 'Incorrect deposit value. No banknotes to satisfy this request.'
+      reject(returnObject.value);
     }
-    depositStarted.value = true;
-  })
+    else {
+      depositStarted.value = true;
+      depositPromiseResolve.value = resolve;
+    }
+  });
 }
 
 const addToDepositValue = (amount) => {
@@ -45,36 +59,58 @@ const addToDepositValue = (amount) => {
 
 const finishInsertingBanknotes = () => {
   if (currentDeposit.value == amountToDeposit.value) {
-    store.setAccountBalance(store.getAccountBalance() + amountToDeposit.value);
-    console.log(store.getAccountBalance());
-    returnObject.value.operationSuccessful = true;
-    returnObject.value.statusMessage = 'Deposit successful';
-    returnObject.value.balanceLeft = store.getAccountBalance();
-    depositPromiseResolve.value(returnObject.value);
-    depositStarted.value = false;
+    finalizeDeposit();
   }
   else if (currentDeposit.value < amountToDeposit.value) {
-    returnObject.value.needInsert = true;
-    emit('insertMore', `Amount inserted lower than declared ${amountToDeposit.value}. Insert more or cancel.`)
+    requestMoreBanknotes();
   }
   else if (currentDeposit.value > amountToDeposit.value) {
-    returnObject.value.needDeclarationFix = true;
-    emit('fixDeclaration', `Amount inserted ${currentDeposit.value} higher than declared ${amountToDeposit.value}. Change the declaration and press Enter or cancel.`);
-
+    requestFixDeclaration();
   }
 }
 
-defineExpose({performDeposit})
+const requestMoreBanknotes = () => {
+  Object.assign(returnObject.value, {
+    needInsert: true,
+    operationSuccessful: false,
+    statusMessage: `Amount inserted lower than declared ${amountToDeposit.value}. Insert more or press Cancel to cancel operation.`
+  })
+  emit('insertMore', returnObject.value.statusMessage)
+}
+
+const requestFixDeclaration = () => {
+  Object.assign(returnObject.value, {
+    needDeclarationFix: true,
+    operationSuccessful: false,
+    statusMessage: `Amount inserted ${currentDeposit.value} higher than declared ${amountToDeposit.value}. Change the declaration and press Enter or press Cancel to cancel operation.`
+  })
+  emit('fixDeclaration', returnObject.value.statusMessage);
+}
+
+const finalizeDeposit = () => {
+  store.setAccountBalance(store.getAccountBalance() + amountToDeposit.value);
+  Object.assign(returnObject.value, {
+    operationSuccessful: true,
+    needInsert: false,
+    needDeclarationFix: false,
+    statusMessage: 'Deposit successful',
+    balanceLeft: store.getAccountBalance()
+  });
+  depositPromiseResolve.value(returnObject.value);
+  resetDeposit();
+}
+
+defineExpose({performDeposit, resetDeposit})
 
 </script>
 
 <template>
   <div class="deposit-operator">
-    <div v-show="depositStarted">Banknote Inserting simulator</div>
-    <div v-show="depositStarted">Inserted: {{ currentDeposit }}</div>
+    <div v-show="depositStarted && !returnObject.needDeclarationFix">Banknote Inserting simulator</div>
+    <div v-show="depositStarted && !returnObject.needDeclarationFix">Inserted: {{ currentDeposit }}</div>
     <div class="status-message-deposit">{{ statusMessage }}</div>
-    <button v-show="depositStarted" v-for="banknote in store.availableBanknotes" @click="addToDepositValue(banknote)">{{ banknote }} PLN</button>
-    <button v-show="depositStarted" @click="finishInsertingBanknotes">All banknotes inserted</button>
+    <button v-show="depositStarted && !returnObject.needDeclarationFix" v-for="banknote in store.availableBanknotes" @click="addToDepositValue(banknote)">{{ banknote }} PLN</button>
+    <button v-show="depositStarted && !returnObject.needDeclarationFix" @click="finishInsertingBanknotes">All banknotes inserted</button>
   </div>
 </template>
 
