@@ -5,7 +5,7 @@ import { ref } from 'vue';
 const store = useGeneralStore()
 const returnObject = ref(createInitialReturnObject())
 
-
+// Creates an initial object to be edited and returned when Promise is resolved or rejected.
 function createInitialReturnObject() {
   return {
     operationSuccessful: false,
@@ -15,6 +15,7 @@ function createInitialReturnObject() {
   };
 }
 
+// Calculates the banknotes needed for payout.
 function calculateBanknotesToPayOut(amountToWithdraw) {
   store.availableBanknotes.forEach(banknote => {
     returnObject.value.banknotesUsed[banknote] = 0;
@@ -29,10 +30,12 @@ function calculateBanknotesToPayOut(amountToWithdraw) {
   return amountToWithdraw
 }
 
+// Performs the deposit action. Invoked from parent after clicking "Enter" in Withdraw mode.
 const performWithdraw = (amount) => {
   const balance = store.getAccountBalance();
-  let amountToWithdraw = parseInt(amount)
-  var temporaryBalance = balance - amountToWithdraw
+  var amountToWithdraw = parseInt(amount)
+  // Asserted balance to be set after withdraw is complete
+  var newBalance = balance - amountToWithdraw
   
   return new Promise((resolve, reject) => {
     if (balance < amountToWithdraw) {
@@ -42,7 +45,7 @@ const performWithdraw = (amount) => {
     }
     amountToWithdraw = calculateBanknotesToPayOut(amountToWithdraw)
     if (amountToWithdraw === 0) {
-      finalizeWithdrawal(temporaryBalance)
+      finalizeWithdrawal(newBalance)
     }
     else {
       rejectWithdrawal()
@@ -60,11 +63,16 @@ function finalizeWithdrawal (temporaryBalance) {
   store.setAccountBalance(temporaryBalance);
 }
 
+const resetWithdrawalOperation = () => {
+  returnObject.value = createInitialReturnObject();
+}
+
 const rejectWithdrawal = () => {
   Object.assign(returnObject.value, {
     banknotesUsed: {},
     statusMessage: 'Incorrect withdrawal value. No banknotes to satisfy this request.'
   })
+  resetWithdrawalOperation();
 }
 
 defineExpose({performWithdraw})
