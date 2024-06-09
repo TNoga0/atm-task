@@ -51,6 +51,7 @@ const performWithdraw = (amount) => {
       rejectWithdrawal()
     }
     resolve(returnObject.value);
+    resetWithdrawalOperation();
     })
 }
 
