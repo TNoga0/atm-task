@@ -10,14 +10,14 @@ import TransactionStatus from '@/components/TransactionStatus.vue'
 import { useGeneralStore } from './stores/generalStore';
 
 const inputModeOn = ref(false);
-const statusMessage = ref('')
+const statusMessage = ref('');
 
-const operationMode = ref('')
+const operationMode = ref('');
 
-const withdraw = ref(null)
-const deposit = ref(null)
+const withdraw = ref(null);
+const deposit = ref(null);
 
-const store = useGeneralStore()
+const store = useGeneralStore();
 
 const handleTransactionChoice = (choice) => {
   inputModeOn.value = true;
@@ -39,10 +39,12 @@ const handleInputEnter = (transactionAmount) => {
         if (transactionData.operationSuccessful) {
           inputModeOn.value = false;
         }
-        statusMessage.value = transactionData.statusMessage
+        statusMessage.value = transactionData.statusMessage;
       })
       .catch(error => {
-        statusMessage.value = error.statusMessage
+        operationMode.value = '';
+        inputModeOn.value = false;
+        statusMessage.value = error.statusMessage;
       });
   }
   else if (operationMode.value === 'deposit') {
@@ -64,7 +66,7 @@ const handleInputEnter = (transactionAmount) => {
 
 const handleFixDeclaration = (message) => {
   inputModeOn.value = true;
-  statusMessage.value = message
+  statusMessage.value = message;
 }
 
 const handleInsertMore = (message) => {

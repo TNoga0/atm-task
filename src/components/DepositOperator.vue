@@ -1,36 +1,26 @@
 <script setup>
 import { useGeneralStore } from '@/stores/generalStore';
 import { ref, computed } from 'vue';
+import {createInitialReturnObject} from '@/utils.js'
 
 const store = useGeneralStore()
 const emit = defineEmits(['fixDeclaration', 'insertMore'])
 
 // Indicates if the deposit process is still ongoing (will still be true if a correction is needed)
-const depositStarted = ref(false)
+const depositStarted = ref(false);
 
-const statusMessage = ref('')
+const statusMessage = ref('');
 
 const showBanknoteSimulator = computed(() => {
   return depositStarted.value && !returnObject.value.needDeclarationFix;
 })
 
 // Currently deposited money. Will be increased after "inserting" each banknote.
-const currentDeposit = ref(0)
+const currentDeposit = ref(0);
 // Declared amount to be deposited. Checked against 'currentDeposit'
-const amountToDeposit = ref(0)
+const amountToDeposit = ref(0);
 
-// Creates an initial object to be edited and returned when Promise is resolved or rejected.
-function createInitialReturnObject() {
-  return {
-    operationSuccessful: false,
-    banknotesUsed: {},
-    balanceLeft: store.getAccountBalance(), // Account balance left after the operation
-    needInsert: false, // Indicates that the amount inserted was lower than the declared.
-    needDeclarationFix: false, // Indicates that the amount inserted was higher than the declared.
-    statusMessage: ''
-  }
-}
-const returnObject = ref(createInitialReturnObject())
+const returnObject = ref(createInitialReturnObject());
 
 // A state object to hold the resolve function of transaction promise. 
 // Used to postpone the execution until banknotes have been inserted and identified.
@@ -45,22 +35,28 @@ const resetDepositOperation = () => {
 
 // Performs the deposit action. Invoked from parent after clicking "Enter" in Deposit mode.
 const performDeposit = (amount) => {
-  amountToDeposit.value = parseInt(amount)
+  amountToDeposit.value = parseInt(amount);
 
   return new Promise((resolve, reject) => {
     // Conditional will be satisfied and used only if the user was prompted to insert more banknotes and the amount after adding them is correct.
     // A bit hacky, but works as intended.
-    if (amountToDeposit.value === currentDeposit.value) {
-      finishInsertingBanknotes();
-      return;
-    }
-    if (!(amountToDeposit.value % 10 === 0)) {
-      returnObject.value.statusMessage = 'Incorrect deposit value. No banknotes to satisfy this request.'
+    if (amountToDeposit.value === 0) {
+      returnObject.value.statusMessage = 'Cannot deposit 0. Try again.'
       reject(returnObject.value);
     }
     else {
-      depositStarted.value = true;
-      depositPromiseResolve.value = resolve;
+      if (amountToDeposit.value === currentDeposit.value) {
+        finishInsertingBanknotes();
+        return;
+      }
+      if (!(amountToDeposit.value % 10 === 0)) {
+        returnObject.value.statusMessage = 'Incorrect deposit value. No banknotes to satisfy this request. Correct the value or cancel.'
+        reject(returnObject.value);
+      }
+      else {
+        depositStarted.value = true;
+        depositPromiseResolve.value = resolve;
+      }
     }
   });
 }
@@ -88,8 +84,8 @@ const requestMoreBanknotes = () => {
     needInsert: true,
     operationSuccessful: false,
     statusMessage: `Amount inserted lower than declared ${amountToDeposit.value}. Insert more or press Cancel to cancel operation.`
-  })
-  emit('insertMore', returnObject.value.statusMessage)
+  });
+  emit('insertMore', returnObject.value.statusMessage);
 }
 
 const requestFixDeclaration = () => {
@@ -97,7 +93,7 @@ const requestFixDeclaration = () => {
     needDeclarationFix: true,
     operationSuccessful: false,
     statusMessage: `Amount inserted ${currentDeposit.value} higher than declared ${amountToDeposit.value}. Change the declaration and press Enter or press Cancel to cancel operation.`
-  })
+  });
   emit('fixDeclaration', returnObject.value.statusMessage);
 }
 
